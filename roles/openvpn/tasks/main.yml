@@ -11,16 +11,16 @@
 
 - name: OpenVPN | main | check for missing packages
   ansible.builtin.include_tasks: "packages.yml"
-# - name: OpenVPN | main | setup pki
-#   ansible.builtin.include_tasks: "pki.yml"
-#   when: rebuild_ovpn  == 'true'
-# - name: OpenVPN | main | setup openvpn
-#   ansible.builtin.include_tasks: "openvpn.yml"
-#   when: rebuild_ovpn  == 'true'
-# # - name: OpenVPN | main | setup dns
-# #   ansible.builtin.include_tasks: "dns.yml"
-# - name: OpenVPN | main | setup sysctl
-#   ansible.builtin.include_tasks: "3.4.4.2.X_sysctl.yml"
+- name: OpenVPN | main | setup pki
+  ansible.builtin.include_tasks: "pki.yml"
+  when: rebuild_ovpn  == 'true'
+- name: OpenVPN | main | setup openvpn
+  ansible.builtin.include_tasks: "openvpn.yml"
+  when: rebuild_ovpn  == 'true'
+# - name: OpenVPN | main | setup dns
+#   ansible.builtin.include_tasks: "dns.yml"
+- name: OpenVPN | main | setup sysctl
+  ansible.builtin.include_tasks: "3.4.4.2.X_sysctl.yml"
 - name: OpenVPN | main | setup config clients
   ansible.builtin.include_tasks: "clienttasks.yml"
   
