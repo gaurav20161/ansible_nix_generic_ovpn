@@ -11,8 +11,11 @@ openvpn_key_province: "Alberta"
 openvpn_key_city: "Edmonton"
 openvpn_key_org: "lvs CERTIFICATE AUTHORITY"
 openvpn_key_ou: "lvs EASY CA"
-openvpn_key_email: "shane.osullivan@lvs1.com"
-openvpn_server: "192.168.50.200"
+openvpn_key_email: "gaurav.kumar@lvs1.com"
+
+openvpn_server: "192.168.50.200"   ######## TO BE UPDATED BASED ON ENVIRONMENT
+
+
 openvpn_server_common_name: "Easy-RSA CA" #openvpn_server_common_name if one is not provide random gen name is created
 ca_password: [] #if one is not provide random gen pwd is created
 pem_password: []
