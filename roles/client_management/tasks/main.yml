@@ -1,20 +1,34 @@
 ---
-- name: client_management | main | do some pre checks
-  ansible.builtin.include_tasks: "pre_checks.yml"
+#include task files
 
-- name: client_management | main | scan scan_ovpn_folder for config files
-  ansible.builtin.include_tasks: "scan_ovpn_folder.yml"
 
-- name: client_management | main | extract data 
-  ansible.builtin.include_tasks: "extract_data.yml"
+- name: generic ovpn client management | main | Enable IPv4 traffic forwarding
+  ansible.builtin.sysctl:
+    name: net.ipv4.ip_forward
+    value: 1
+
+- name: generic ovpn client management | main | Gather OpenVPN client configurations
+  ansible.builtin.find:
+    paths: "{{ openvpn_path_ccd }}"
+    recurse: no
+    patterns: "*"
+  register: ccd_files
+
+- name: generic ovpn client management | main | Create a list of client data
+  set_fact:
+    client_data: []
+
+- name: generic ovpn client management | main | Loop over the list of files
+  include_tasks: extract_data.yml
+  loop: "{{ ccd_files.files }}"
+  loop_control:
+    loop_var: item
     
-- name: client_management | main | create reports
+
+    
+
+- name: generic ovpn client management | main | run debug tasks if show_debug var true
+  ansible.builtin.include_tasks: "debug_vars.yml"
+
+- name: generic ovpn client management | main | Run pre commands on hosts
   ansible.builtin.include_tasks: "create_report.yml"
-
-# not needed if ansible playbook is ran in jenkins
-# - name: client_management | main | artifact reports to jenkins
-#   ansible.builtin.include_tasks: "artifact_jenkins.yml"
-
-
-    
-    
