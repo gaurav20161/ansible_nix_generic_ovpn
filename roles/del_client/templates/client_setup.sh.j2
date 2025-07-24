@@ -1,0 +1,190 @@
+#!/bin/bash
+
+# Function to check if a command is available
+function check_command() {
+    local command=$1
+
+    if ! command -v "$command" &> /dev/null; then
+        echo "$command is not installed."
+        return 1
+    fi
+}
+
+# Function to test if UDP port is open
+function test_udp_port() {
+    local host=$1
+    local port=$2
+
+    nc -uzv "$host" "$port" &> /dev/null
+    if [ $? -eq 0 ]; then
+        echo "UDP port $port is open on $host."
+        return 0
+    else
+        echo "UDP port $port is closed on $host."
+        return 1
+    fi
+}
+
+# Check if nc (netcat) is installed
+check_command "nc" || {
+    read -p "Netcat (nc) is not installed. Do you want to install it? (y/n): " nc_response
+
+    if [ "$nc_response" == "y" ] || [ "$nc_response" == "Y" ]; then
+        # Check if the user has sudo access
+        if [ "$(sudo -n whoami 2>&1 | grep 'root')" ]; then
+            # Install nc on Almalinux
+            if command -v dnf &> /dev/null; then
+                sudo dnf install -y nc
+            else
+                echo "Unsupported package manager. Please install nc manually."
+                exit 1
+            fi
+        else
+            echo "You don't have sudo access. Please contact your system administrator to install nc."
+            exit 1
+        fi
+    else
+        echo "Netcat (nc) installation canceled. Exiting."
+        exit 1
+    fi
+}
+
+# Test UDP port 1194 on the server
+SERVER_IP="{{ openvpn_server }}"
+SERVER_GW_IP="{{ openvpn_gateway }}"
+SERVER_PORT="{{ openvpn_port }}"
+
+if test_udp_port "$SERVER_IP" "$SERVER_PORT"; then
+    echo "UDP port test passed. Proceeding with OpenVPN setup."
+else
+    echo "UDP port test failed. Please check the server availability and firewall settings."
+    exit 1
+fi
+
+CONF_DIR="/etc/openvpn/client"
+EXPECTED_CONTENT="client
+proto {{ openvpn_proto }}
+explicit-exit-notify
+remote {{ openvpn_server }} {{ openvpn_port }}
+dev tun
+resolv-retry infinite
+nobind
+persist-key
+persist-tun
+remote-cert-tls server
+verify-x509-name {{ sng_name }} name
+auth SHA256
+auth-nocache
+cipher AES-128-GCM
+tls-client
+tls-version-min 1.2
+tls-cipher TLS-ECDHE-ECDSA-WITH-AES-128-GCM-SHA256
+ignore-unknown-option block-outside-dns
+setenv opt block-outside-dns # Prevent Windows 10 DNS leak
+verb 3
+<ca>
+{{ ca_cert_content }}
+</ca>
+<cert>
+{{ client_cert_content }}
+</cert>
+<key>
+{{ client_key_content }}
+</key>
+<tls-crypt>
+{{ tls_key_content }}
+</tls-crypt>"
+
+# Check if OpenVPN is installed
+if command -v openvpn &> /dev/null; then
+    echo "OpenVPN is already installed."
+else
+    # Prompt the user before attempting to install
+    read -p "OpenVPN is not installed. Do you want to install it? (y/n): " response
+
+    if [ "$response" == "y" ] || [ "$response" == "Y" ]; then
+        # Check if the user has sudo access
+        if [ "$(sudo -n whoami 2>&1 | grep 'root')" ]; then
+            # Install OpenVPN on Debian-based systems
+            if command -v apt-get &> /dev/null; then
+                sudo apt-get update
+                sudo apt-get install -y epel-release
+                sudo apt-get install -y openvpn
+            # Install OpenVPN on Red Hat-based systems
+            elif command -v yum &> /dev/null; then
+                sudo yum install -y epel-release
+                sudo yum install -y openvpn
+            else
+                echo "Unsupported package manager. Please install OpenVPN manually."
+                exit 1
+            fi
+
+            # Check again if OpenVPN is installed
+            if command -v openvpn &> /dev/null; then
+                echo "OpenVPN has been installed successfully."
+            else
+                echo "Failed to install OpenVPN. Please install it manually."
+                exit 1
+            fi
+        else
+            echo "You don't have sudo access. Please contact your system administrator to install OpenVPN."
+            exit 1
+        fi
+    else
+        echo "OpenVPN installation canceled."
+        exit 0
+    fi
+fi
+
+# Use the current hostname as the configuration file name
+hostname=$(hostname)
+conf_file="$CONF_DIR/$hostname.conf"
+
+# Check if the configuration file exists
+if [ -e "$conf_file" ]; then
+    # Check if there are changes in the content
+# Check if there are changes in the content
+if diff -q <(cat "$conf_file") <(echo -n "$EXPECTED_CONTENT"); then
+    echo "OpenVPN configuration file is up-to-date at $conf_file."
+else
+    # Prompt the user before changing the configuration file
+    read -p "OpenVPN configuration file has changes. Do you want to overwrite it? (y/n): " overwrite_response
+
+    if [ "$overwrite_response" == "y" ] || [ "$overwrite_response" == "Y" ]; then
+        # Update the configuration file with the specified content
+        echo -n "$EXPECTED_CONTENT" | sudo tee "$conf_file" > /dev/null
+        echo "OpenVPN configuration file updated at $conf_file"
+    else
+        echo "OpenVPN configuration file was not changed."
+    fi
+fi
+
+else
+    # Create the configuration file with the specified content
+    echo "$EXPECTED_CONTENT" | sudo tee "$conf_file" > /dev/null
+    echo "OpenVPN configuration file created at $conf_file"
+fi
+
+
+# Function to test connection to a specified IP address
+function test_connection_to_gateway() {
+    local gateway_ip=$1
+
+    ping -c 4 "$gateway_ip" &> /dev/null
+    if [ $? -eq 0 ]; then
+        echo "Connection to $gateway_ip successful."
+    else
+        echo "Connection to $gateway_ip failed. Please check network connectivity."
+        exit 1
+    fi
+}
+
+# Start and enable the OpenVPN client service
+sudo systemctl start openvpn-client@${hostname}
+sudo systemctl enable openvpn-client@${hostname}
+
+# Test connection to SERVER_GW_IP
+test_connection_to_gateway "$SERVER_GW_IP"
+
+# Display information about the tun0 interface
+ip a show dev tun0

@@ -1,0 +1,26 @@
+---
+- name: client_management | scan_ovpn_folder | Gather OpenVPN client configurations
+  ansible.builtin.find:
+    paths: "{{ openvpn_path_ccd }}"
+    recurse: no
+    patterns: "*"
+  register: ccd_files
+
+- name: client_management | set_fact | Create ccd_tables
+  set_fact:
+    ccd_tables: "{{ ccd_tables | default({}) | combine({ item.path | basename: {} }) }}"
+  with_items: "{{ ccd_files.files }}"
+
+
+#debug ccd_files
+- name: client_management | scan_ovpn_folder | debug after List tables
+  debug:
+    var: ccd_files
+
+#debug
+- name: client_management | scan_ovpn_folder | debug list ccd_tables
+  debug:
+    msg: "{{ ccd_tables.keys() | list }}"
+- name: client_management | scan_ovpn_folder | debug after List tables
+  debug:
+    var: ccd_tables

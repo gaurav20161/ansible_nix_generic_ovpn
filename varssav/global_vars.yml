@@ -1,0 +1,66 @@
+---
+gendate: "{{ ansible_date_time.iso8601 }}"
+show_debug: false
+
+mgmt_usr: lvsadmin
+mgmt_grp: lvsadmin
+
+#location for storing output files 
+default_file_output: output
+report_output_folder: "{{ default_file_output }}/reports/"
+client_sh_folder: "{{ default_file_output }}/client_sh_folder/"
+
+
+#location paths for openvpn
+openvpn_path: "/etc/openvpn"
+openvpn_path_ccd: "{{ openvpn_path }}/ccd"
+openvpn_ifconfig_pool_persist_file: "{{ openvpn_path }}/ipp.txt"
+openvpn_key_dir: "{{ openvpn_path_keys }}"
+openvpn_client_sh_dir: "{{ openvpn_path }}/client_sh"
+openvpn_path_easyrsa: "{{ openvpn_path }}/easy-rsa"
+openvpn_path_easyrsa_vars: "{{ openvpn_path_easyrsa }}/vars"
+openvpn_path_pki: "{{ openvpn_path_easyrsa }}/pki"
+openvpn_path_certs: "{{ openvpn_path_pki }}/issued"
+openvpn_path_reqs: "{{ openvpn_path_pki }}/reqs"
+openvpn_hmac_firewall: "{{ openvpn_path_pki }}/ta.key"
+openvpn_ca_cert: "{{ openvpn_path_pki }}/ca.crt"
+openvpn_path_keys: "{{ openvpn_path_pki }}/private"
+dhparams_size: "{{ openvpn_key_size }}"
+dhparams_location: "{{ openvpn_path_pki }}/dh.pem"
+openvpn_crl: "{{ openvpn_path_pki }}/crl.pem"
+openvpn_server_common_name_file: "{{ openvpn_path }}/openvpn_server_common_name"
+openvpn_server: "tbd"
+openvpn_proto: udp
+openvpn_port: 1194
+
+crl_days: 3650
+delete_log: "/var/log/openvpn_delete.log"
+
+class_c_ip: "{{ openvpn_class_c }}"
+start_ip: "{{ class_c_ip }}.2"
+end_ip: "{{ class_c_ip }}.253"
+DELETE_LOG: "/var/log/openvpn/client_delete.log"
+CONNECTION_LOG: /var/log/openvpn/client_config.log
+ip_range_start: 2
+ip_range_end: 253
+openvpn_gateway: "{{ class_c_ip }}.1"
+openvpn_subnet_mask: "255.255.255.0"
+
+ansible_python_interpreter: /usr/bin/python3.11
+
+# class_c_ip="11.1.1"
+
+# start_ip="$class_c_ip.2"
+# end_ip="$class_c_ip.253"
+
+# CONFDIR=/etc/openvpn
+# EASYRSA=$CONFDIR/easy-rsa
+# CLIENTCONFDIR=$CONFDIR/ccd
+# CERTCMD=$EASYRSA/make-client-keypair
+# CERTDIR=$EASYRSA/keys
+# REVOKEDCRTSER=$EASYRSA/pki/revoked/certs_by_serial
+# DELETE_LOG="/var/log/openvpn/client_delete.log"
+# CONNECTION_LOG=/var/log/openvpn/client_config.log
+# GENDATE=`date "+%Y-%m-%d%t%H:%M:%S %Z"`
+# CLIENT=$1
+# CLIENT=${CLIENT,,}

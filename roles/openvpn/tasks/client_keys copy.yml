@@ -1,0 +1,184 @@
+# generate client keys
+---
+- name: OpenVPN | client_keys | set_facts
+  ansible.builtin.set_fact:
+    additional_certs_to_revoke: "{{ _additional_certs_to_revoke.stdout_lines | default([]) }}"
+    additional_certs_to_add: "{{ _additional_certs_to_add.stdout_lines | default([]) }}"
+  tags:
+    - client_keys
+
+- name: OpenVPN | client_keys | Check if files exist
+  stat:
+    path: "{{ openvpn_path_easyrsa }}/pki/reqs/{{ item }}.req"
+  register: file_info
+  with_items: "{{ groups['openvpn_clients'] | list }}"
+  tags:
+    - client_keys
+- name: OpenVPN | client_keys | Print file_info result
+  ansible.builtin.debug:
+    var: file_info
+  when: show_debug  == 'true'
+  tags:
+    - cp_client_keys 
+
+- name: "OpenVPN | client_keys | Verifying if client request exists"
+  debug: msg="File {{ item.item }} does not exist"
+  with_items: "{{ file_info.results }}"
+  when: item.stat.exists == false
+  tags:
+    - cp_client_keys 
+
+
+- name: "OpenVPN | client_keys | Generate Client Key"
+  ansible.builtin.command: >-
+    ./easyrsa
+      {{ ' --passout=pass:' + pem_password if pem_password | default(None) else '' }}
+      {{ ' --passin=pass:' + pem_password if pem_password | default(None) else '' }}
+      gen-req {{ item.item }}
+      {{ 'nopass' if not pem_password | default(None) else '' }}
+  args:
+    chdir: "{{ openvpn_path_easyrsa }}"
+  with_items: "{{ file_info.results }}"
+  when: item.stat.exists == false
+  tags:
+    - cp_client_keys 
+
+- name: OpenVPN | client_keys | check if req is already signed /etc/openvpn/easyrsa/easyrsa3/pki/issued/192.168.50.140.crt
+  stat:
+    path: "{{ openvpn_path_easyrsa }}/pki/issued/{{ item }}.crt"
+  register: signedclient_info
+  with_items: "{{ groups['openvpn_clients'] | list }}"
+  tags:
+    - client_keys
+- name: "OpenVPN | client_keys | check if req is already signed"
+  debug: msg="File {{ item.item }} does not exist"
+  with_items: "{{ signedclient_info.results }}"
+  when: item.stat.exists == false
+  tags:
+    - cp_client_keys 
+
+
+- name: "OpenVPN | PKI | Sign Client Key"
+  ansible.builtin.command: >-
+    ./easyrsa
+      {{ ' --passout=pass:' + pem_password if pem_password | default(None) else '' }}
+      {{ ' --passin=pass:' + pem_password if pem_password | default(None) else '' }}
+      sign-req client {{ item.item }}
+      {{ 'nopass' if not pem_password | default(None) else '' }}
+  args:
+    chdir: "{{ openvpn_path_easyrsa }}"
+  with_items: "{{ signedclient_info.results }}"
+  when: item.stat.exists == false
+  tags:
+    - cp_client_keys 
+
+
+- name: OpenVPN | client_keys | Generate client config
+  ansible.builtin.template:
+    src: client.ovpn.j2
+    dest: "{{ openvpn_path }}/client/{{ item }}.ovpn"
+    owner: root
+    group: root
+    mode: 0400
+  with_items:
+    - "{{ groups['openvpn_clients'] | list }}"
+
+- name: OpenVPN | client_keys | block | Copy client certs and keys
+  block:
+    - name: OpenVPN | client_keys | Check if local tmp folder exists
+      stat:
+        path: /tmp/client
+      register: tmpfolder_status
+      run_once: true
+
+    - name: OpenVPN | client_keys | Create local tmp folder
+      file:
+        path: /tmp/client
+        state: directory
+      when: not tmpfolder_status.stat.exists
+      run_once: true
+
+
+    - name: OpenVPN | client_keys | Copy CA cert to client folder
+      ansible.builtin.file:
+        src: "{{ openvpn_ca_cert }}"
+        dest: "/tmp/client/"
+        force: yes
+        state: hard
+
+    - name: OpenVPN | client_keys | Copy private client key to client folder
+      ansible.builtin.file:
+        src: "{{ openvpn_path_easyrsa }}/pki/private/{{ item }}.key"
+        dest: "/tmp/client/{{ item }}.key"
+        force: yes
+        state: hard
+
+      with_items:
+        - "{{ groups['openvpn_clients'] | list }}"
+
+    - name: OpenVPN | client_keys | Copy issued client crt to client folder
+      ansible.builtin.file:
+        src: "{{ openvpn_path_easyrsa }}/pki/issued/{{ item }}.crt"
+        dest: "/tmp/client/{{ item }}.crt"
+        force: yes
+        state: hard
+
+      with_items:
+        - "{{ groups['openvpn_clients'] | list }}"
+
+  tags:
+    - cp_client_keys  
+
+
+# - name: OpenVPN | PKI | Recursively change ownership client folder
+#   ansible.builtin.file:
+#     path: "{{ openvpn_path }}/client"
+#     owner: root
+#     group: root
+#     state: directory
+#     recurse: yes
+#   run_once: true
+#   tags:
+#     - cp_client_keys  
+
+
+
+- name: OpenVPN | client_keys | Create local directory directory
+  file:
+    path: "{{ local_creds_folder }}"
+    state: directory
+#    mode: "0755"
+    owner: "{{mgmt_usr}}"
+    group: "{{mgmt_grp}}"
+
+  tags:
+    - cp_client_keys  
+
+
+- name: OpenVPN | client_keys | Save CA cert to local ansible playbook directory
+#  become: true
+  ansible.builtin.fetch:
+    src: "/tmp/client/ca.crt"
+    dest: "{{ local_creds_folder }}"
+    owner: "{{mgmt_usr}}"
+    group: "{{mgmt_grp}}"
+  register: fetch_result
+  tags:
+    - cp_client_keys  
+- name: OpenVPN | client_keys | Print fetch result
+  ansible.builtin.debug:
+    var: fetch_result
+  tags:
+    - cp_client_keys  
+
+- name: OpenVPN | client_keys | search for files to copy
+  ansible.builtin.shell: (cd /tmp/client; find . -maxdepth 1 -type f) | cut -d'/' -f2
+  register: files_to_copy
+
+- name: OpenVPN | client_keys | copy files from search
+  ansible.builtin.fetch: 
+    src: /tmp/client/{{ item }} 
+    dest: "{{ local_creds_folder }}"
+  with_items: "{{ files_to_copy.stdout_lines }}"
+  tags:
+    - cp_client_keys  

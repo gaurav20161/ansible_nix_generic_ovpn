@@ -1,0 +1,41 @@
+---
+- name: OpenVPN | sysctl | Enable IPv4 traffic forwarding
+  ansible.builtin.sysctl:
+    name: net.ipv4.ip_forward
+    value: 1
+
+- name: OpenVPN | openvpn | Check if ipp.txt file exists
+  ansible.builtin.stat:
+    path: "{{ openvpn_ifconfig_pool_persist_file }}"
+  register: ippfile_check
+
+- name: OpenVPN | openvpn | create ipp.txt file if it not there
+  ansible.builtin.file: 
+    path: "{{ openvpn_ifconfig_pool_persist_file }}"
+    state: touch 
+    owner: root 
+    group: root 
+  when: ippfile_check.stat.exists is defined and not ippfile_check.stat.exists
+
+- name: OpenVPN | openvpn | Create client configuration directory
+  ansible.builtin.file:
+    path: "{{ openvpn_path_ccd }}"
+    state: directory
+    owner: root
+    group: openvpn 
+    mode: 0744
+
+- name: OpenVPN | Configuration | Copy OpenVPN server configuration files into place
+  ansible.builtin.template:
+    src: etc_openvpn_server.conf.j2
+    dest: "{{ openvpn_path }}/server/{{ item.proto }}-{{ item.port }}.conf"
+  with_items: "{{ openvpn_instances }}"
+
+
+
+- name: OpenVPN | systemd | Enable services
+  ansible.builtin.service:
+    name: "openvpn-server@{{ item.proto }}-{{ item.port }}.service"
+    enabled: true
+    state: started
+  with_items: "{{ openvpn_instances }}"

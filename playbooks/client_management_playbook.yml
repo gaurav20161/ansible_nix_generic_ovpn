@@ -1,0 +1,11 @@
+---
+- hosts: all
+  become: true
+  gather_facts: true
+  vars_files:
+    - vars/global_vars.yml
+
+
+  roles:
+    - { role: client_management, tags: ['client_management'] }
+

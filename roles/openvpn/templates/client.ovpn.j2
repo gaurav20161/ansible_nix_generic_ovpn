@@ -1,0 +1,19 @@
+client
+dev tun
+proto {{ openvpn_proto }}
+remote {{ openvpn_gateway }} {{ openvpn_port }}
+ca {{ openvpn_path }}/client/ca.cer
+cert {{ openvpn_path }}/client/client.crt
+key {{ openvpn_path }}/client/client.key
+cipher {{ openvpn_cipher }}
+auth {{ openvpn_auth_alg }}
+auth-nocache
+tls-version-min 1.2
+tls-cipher {{ openvpn_tls_cipher }}
+resolv-retry {{ openvpn_resolv_retry }}
+compress {{ openvpn_compression }}
+nobind
+persist-key
+persist-tun
+mute-replay-warnings
+verb 3

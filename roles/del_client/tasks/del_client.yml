@@ -1,0 +1,91 @@
+---
+- name: OpenVPN | del_client | Read file and extract serial for the provided client name
+  ansible.builtin.shell: cat /etc/openvpn/easy-rsa/pki/index.txt | grep "{{ client_name }}" | awk '{print $3}'
+  register: serial_result
+  changed_when: false
+
+- debug:
+    msg: "Serial for {{ client_name }}: {{ serial_result.stdout }}"
+  when: serial_result.stdout != ""
+
+- name: OpenVPN | del_client | Delete revoke EasyRSA client key
+  ansible.builtin.expect:
+    command: "{{ openvpn_path_easyrsa }}/easyrsa --batch revoke {{ client_name }}"
+    responses:
+      '.*Type the word.*': 'yes'
+  environment:
+    EASYRSA_VARS_FILE: "{{ openvpn_path_easyrsa_vars }}"
+  args:
+    chdir: "{{ openvpn_path_easyrsa }}"
+
+- name: OpenVPN | del_client | Generate CRL
+  shell: |
+    EASYRSA_CRL_DAYS=3650 ./easyrsa gen-crl
+  args:
+    chdir: "{{ openvpn_path_easyrsa }}"
+  register: gen_crl_result
+
+- name: OpenVPN | del_client | Copy CRL to OpenVPN directory
+  copy:
+    src: "{{ openvpn_path_pki }}/crl.pem"
+    dest: "{{ openvpn_path }}/crl.pem"
+    mode: '0644'
+    remote_src: yes
+
+- name: OpenVPN | del_client | Remove client OpenVPN configurations
+  file:
+    path: "{{ item }}"
+    state: absent
+  loop:
+    - "/home/{{ mgmt_usr }}/{{ client_name }}.ovpn"
+    - "/root/*/{{ client_name }}.ovpn"
+    - "/root/{{ client_name }}.ovpn"
+
+- name: OpenVPN | del_client | Remove revoked certificate entry
+  lineinfile:
+    path: "{{ openvpn_path_pki }}/index.txt"
+    state: absent
+    regexp: "{{ serial_result.stdout }}"
+
+
+- name: OpenVPN | del_client | Create a backup of index.txt file
+  ansible.builtin.copy:
+    src: "{{ openvpn_path_pki }}/index.txt"
+    dest: "{{ openvpn_path_pki }}/index.txt.bk"
+    remote_src: true
+
+# - name: OpenVPN | del_client | Remove client revoked crt
+#   block:
+#     - name: OpenVPN | del_client |  Check if file exists
+#       ansible.builtin.stat:
+#         path: "{{ openvpn_path_pki }}/revoked/certs_by_serial/{{ serial_result.stdout }}.crt"
+#         /etc/openvpn/easy-rsa/pki/revoked/certs_by_serial/
+#       register: revokedcrt_check
+
+#     - name: OpenVPN | del_client | Remove client revoked crt
+#       ansible.builtin.file:
+#         path: "{{ openvpn_path_pki }}/revoked/certs_by_serial/{{ serial_result.stdout }}.crt"
+#         state: adsent
+#       when: revokedcrt_check.stat.exists
+#   rescue:
+#     - name: Print when errors
+#       ansible.builtin.debug:
+#         msg: 'there was no crt file in "{{ openvpn_path_pki }}/revoked/certs_by_serial/"'
+#   run_once: true
+
+- name: OpenVPN | del_client | Remove client ccd configurations
+  file:
+    path: "{{ openvpn_path_ccd }}/{{ client_name }}"
+    state: absent
+
+
+- name: OpenVPN | del_client | Remove client ccd configurations
+  file:
+    path: "{{ openvpn_client_sh_dir }}/{{ client_name }}.sh"
+    state: absent
+
+- name: Log revoke information
+  lineinfile:
+    path: "{{ DELETE_LOG }}"
+    line: "OpenVPN Client Configuration for {{ client_name }} has been successfully removed on {{ gendate }}"
+    create: yes

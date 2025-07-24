@@ -1,0 +1,63 @@
+---
+#debugs based on inventory hostname
+- name: generic ovpn client management | debug_vars | debug ccd_files
+  ansible.builtin.debug:
+      msg: "{{ ccd_files }}"
+  ignore_errors: yes
+  when: 
+    - show_debug  == 'true'
+
+- name: generic ovpn client management | debug_vars | debug client_data
+  ansible.builtin.debug:
+      msg: "{{ client_data }}"
+  ignore_errors: yes
+  when: 
+    - show_debug  == 'true'
+
+- name: generic ovpn client management | debug_vars | debug script_output.stdout_lines
+  ansible.builtin.debug:
+      msg: "{{ script_output.stdout_lines }}"
+  ignore_errors: yes
+  when: 
+    - show_debug  == 'true'
+
+- name: generic ovpn client management | debug_vars | debug next_available_ip
+  ansible.builtin.debug:
+      msg: "{{ next_available_ip }}"
+  ignore_errors: yes
+  when: 
+    - show_debug  == 'true'
+
+- name: Use the next available IP in another task
+  debug:
+    msg: "Using IP: {{ next_available_ip }}"
+  when: 
+    - show_debug  == 'true'
+
+- name: Display existing configuration and continue with the next steps if found
+  debug:
+    msg: "An OpenVPN client configuration already exists for {{ client_name }}:\n{{ openvpn_path_keys }}/{{ client_name }}.key"
+  when: config_file_stat.stat.exists
+
+- name: Continue with the next steps if configuration does not exist
+  debug:
+    msg: "No existing configuration found for {{ client_name }}"
+  when: not config_file_stat.stat.exists
+
+- name: OpenVPN | client_keys | Print ca file results 
+  ansible.builtin.debug:
+    var: cafile_info
+  when: show_debug  == 'true'
+
+- name: OpenVPN | client_keys | show content of cafile
+  ansible.builtin.debug:
+    var: ca_content
+  when: show_debug  == 'true'
+
+- name: OpenVPN | client_keys | show content of ca_crt_content.stdout
+  ansible.builtin.debug:
+    var: ca_crt_content.stdout
+  when: show_debug  == 'true'
+
+
+

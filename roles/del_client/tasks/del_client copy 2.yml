@@ -1,0 +1,122 @@
+---
+
+# - name: Create EasyRSA client key
+#   ansible.builtin.expect:
+#     command: "{{ openvpn_path_easyrsa }}/easyrsa --batch revoke {{ client_name }}"
+#     responses:
+#       '.*Type the word.*': 'yes'
+#   environment:
+#     EASYRSA_VARS_FILE: "{{ openvpn_path_easyrsa_vars }}"
+#   args:
+#     chdir: "{{ openvpn_path_easyrsa }}"
+
+
+
+
+
+
+
+
+
+
+
+
+- name: Get number of existing clients
+  shell: |
+    tail -n +2 /etc/openvpn/easy-rsa/pki/index.txt | grep -c "^V"
+  register: number_of_clients
+
+- name: Check if there are no existing clients
+  fail:
+    msg: "You have no existing clients!"
+  when: number_of_clients.stdout == '0'
+
+- name: Select client certificate to revoke
+  shell: |
+    tail -n +2 /etc/openvpn/easy-rsa/pki/index.txt | grep "^V" | cut -d '=' -f 2 | nl -s ') '
+  register: client_names_output
+
+
+- name: Find certificate number based on client certificate name
+  shell: |
+    grep -E "^V.*{{ client_name }}\$" /etc/openvpn/easy-rsa/pki/index.txt | cut -d '=' -f 1 | cut -d '/' -f 2
+  register: certificate_number
+  ignore_errors: yes
+
+- name: Check if certificate found
+  fail:
+    msg: "Certificate '{{ client_name }}' not found."
+  when: certificate_number.stdout_lines|length == 0
+
+- set_fact:
+    CERTIFICATE_NUMBER: "{{ certificate_number.stdout }}"
+
+
+
+
+- name: Get selected client
+  shell: |
+    tail -n +2 /etc/openvpn/easy-rsa/pki/index.txt | grep "^V" | cut -d '=' -f 2 | sed -n "{{ CERTIFICATE_NUMBER }}p"
+  register: selected_client
+
+- name: Revoke client certificate
+  shell: |
+    cd {{ openvpn_path_easyrsa }} && ./easyrsa --batch revoke "{{ selected_client.stdout }}"
+  args:
+    chdir: "{{ openvpn_path_easyrsa }}"
+  register: revoke_client_result
+
+- name: Generate CRL
+  shell: |
+    EASYRSA_CRL_DAYS=3650 ./easyrsa gen-crl
+  args:
+    chdir: "{{ openvpn_path_easyrsa }}"
+  register: gen_crl_result
+
+- name: Copy CRL to OpenVPN directory
+  copy:
+    src: "{{ openvpn_path_pki }}/crl.pem"
+    dest: "{{ openvpn_path }}/crl.pem"
+    mode: '0644'
+    remote_src: yes
+
+- name: Remove client OpenVPN configurations
+  file:
+    path: "{{ item }}"
+    state: absent
+  loop:
+    - "/home/{{ mgmt_usr }}/{{ selected_client.stdout }}.ovpn"
+    - "/root/*/{{ selected_client.stdout }}.ovpn"
+    - "/root/{{ selected_client.stdout }}.ovpn"
+
+- name: Backup index.txt
+  copy:
+    src: "{{ openvpn_path_pki }}/index.txt"
+    dest: "{{ openvpn_path_pki }}/index.txt.bk"
+    remote_src: yes
+
+- name: Remove revoked certificate entry
+  lineinfile:
+    path: "{{ openvpn_path_pki }}/index.txt"
+    state: absent
+    regexp: "{{ selected_client.stdout }}"
+
+- name: Remove client configurations
+  file:
+    path: "{{ item }}"
+    state: absent
+  loop:
+    - "{{ openvpn_path_ccd }}/{{ selected_client.stdout }}"
+    - "{{ openvpn_client_sh_dir }}/{{ selected_client.stdout }}.sh"
+
+- name: Print certificate revoked message
+  debug:
+    msg: "Certificate for client {{ selected_client.stdout }} revoked. OpenVPN Client Configuration for {{ selected_client.stdout }} has been successfully removed on {{ gendate }}"
+  register: revoke_message
+
+- name: Log revoke information
+  lineinfile:
+    path: "{{ DELETE_LOG }}"
+    line: "OpenVPN Client Configuration for {{ selected_client.stdout }} has been successfully removed on {{ gendate }}"
+    create: yes
+

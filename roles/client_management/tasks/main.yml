@@ -1,0 +1,20 @@
+---
+- name: client_management | main | do some pre checks
+  ansible.builtin.include_tasks: "pre_checks.yml"
+
+- name: client_management | main | scan scan_ovpn_folder for config files
+  ansible.builtin.include_tasks: "scan_ovpn_folder.yml"
+
+- name: client_management | main | extract data 
+  ansible.builtin.include_tasks: "extract_data.yml"
+    
+- name: client_management | main | create reports
+  ansible.builtin.include_tasks: "create_report.yml"
+
+# not needed if ansible playbook is ran in jenkins
+# - name: client_management | main | artifact reports to jenkins
+#   ansible.builtin.include_tasks: "artifact_jenkins.yml"
+
+
+    
+    

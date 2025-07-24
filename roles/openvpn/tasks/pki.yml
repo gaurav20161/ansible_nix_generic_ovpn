@@ -1,0 +1,205 @@
+---
+# - name: OpenVPN | PKI | EasyRSA Checkout
+#   ansible.builtin.git:
+#     repo: https://github.com/OpenVPN/easy-rsa.git
+#     accept_hostkey: True
+#     remote: github
+#     version: "{{ openvpn_easyrsa_version }}"
+#     dest: "{{ openvpn_path }}/easyrsa"
+
+- name: OpenVPN | PKI | EasyRSA Checkout
+  ansible.builtin.git:
+    repo: "{{ easyrsa_repo }}"
+    dest: "{{ openvpn_path }}/easyrsa"
+    version: "{{ easyrsa_version }}"
+
+
+
+- name: OpenVPN | PKI | Check if folder exists
+  block:
+    - name: OpenVPN | PKI | Check if folder exists
+      ansible.builtin.stat:
+        path: "{{ local_creds_folder }}"
+      delegate_to: localhost
+      register: folder_check
+    - name: OpenVPN | PKI | Make local destination folder
+      ansible.builtin.file:
+        path: "{{ local_creds_folder }}"
+        state: directory
+        owner: "{{mgmt_usr}}"
+        group: "{{mgmt_grp}}"
+      delegate_to: localhost
+      when: not folder_check.stat.exists
+  rescue:
+    - name: Print when errors
+      ansible.builtin.debug:
+        msg: 'Something went wrong'
+  always:
+    - name: Always do this
+      ansible.builtin.debug:
+        msg: "This always executes"
+      when: show_debug  == 'true'
+  run_once: true
+
+# - name: OpenVPN | PKI | Generate a random server common name
+#   ansible.builtin.shell: grep -v -P "[\x80-\xFF]" {{ path_dict }} | sed -e "s/'//" | shuf -n 2 | xargs | sed -e 's/ /./g' | cut -c 1-64 > {{ openvpn_server_common_name_file }}
+#   args:
+#     creates: "{{ openvpn_server_common_name_file }}"
+#   when: openvpn_server_common_name is not defined
+
+# - name: OpenVPN | PKI | Register the OpenVPN server common name
+#   ansible.builtin.command: cat {{ openvpn_server_common_name_file }}
+#   register: openvpn_server_common_name_result
+#   changed_when: false
+#   when: openvpn_server_common_name is not defined
+
+# - name: OpenVPN | PKI | Generate CA password
+#   ansible.builtin.shell: echo "$(head /dev/urandom | tr -dc A-Za-z0-9 | head -c15)"
+#   no_log: true
+#   register: ca_password_result
+#   when: ca_password is not defined
+
+
+- name: OpenVPN | PKI | Set server key and cert path variables
+  ansible.builtin.set_fact:
+    path_server_key: "{{ openvpn_path_keys }}/{{ openvpn_server }}.key"
+    path_server_cert: "{{ openvpn_path_certs }}/{{ openvpn_server }}.crt"
+
+- name: OpenVPN | PKI | EasyRSA Link project
+  ansible.builtin.file:
+    src: ./easyrsa/easyrsa3/pki
+    dest: "{{ openvpn_path_pki }}"
+    owner: root
+    group: root
+    force: yes
+    state: link
+
+- name: OpenVPN | PKI | Deploy vars configuration
+  ansible.builtin.template:
+    src: etc_openvpn_easyrsa_easyrsa3_vars.j2
+    dest: "{{ openvpn_path_easyrsa }}/vars"
+    owner: root
+    group: root
+    mode: 0600
+
+- name: OpenVPN | PKI | Intialize PKI
+  ansible.builtin.shell: echo 'yes' | ./easyrsa init-pki
+  args:
+    chdir: "{{ openvpn_path_easyrsa }}"
+    creates: "{{ openvpn_path_keys }}"
+  when: not easyrsa_reset | bool
+
+- name: OpenVPN | PKI | Reset PKI
+  command: easyrsa init-pki
+  when: easyrsa_reset | bool
+  changed_when: true
+
+
+- name: OpenVPN | PKI | Copy vars configuration to pki folder
+  ansible.builtin.file:
+    src: "{{ openvpn_path_easyrsa }}/vars"
+    dest: "{{ openvpn_path_easyrsa }}/pki/vars"
+    owner: root
+    group: root
+    force: yes
+    state: hard
+
+- name: OpenVPN | PKI | Remove vars file easyrsa3 folder (duplicate file)
+  ansible.builtin.file:
+    path: "{{ openvpn_path_easyrsa }}/vars"
+    state: absent
+
+- name: OpenVPN | PKI | Check if ca file exists
+  ansible.builtin.stat:
+    path: "{{ openvpn_path_easyrsa }}/pki/private/ca.key"
+  delegate_to: localhost
+  register: cafile_check
+
+- name: OpenVPN | PKI | Build CA
+  command: >-
+    ./easyrsa
+      {{ ' --passout=pass:' + ca_password if ca_password | default(None) else '' }}
+      {{ ' --passin=pass:' + ca_password if ca_password | default(None) else '' }}
+      build-ca
+      {{ 'nopass' if not ca_password | default(None) else '' }}
+  args:
+    chdir: "{{ openvpn_path_easyrsa }}"
+    creates: "{{ openvpn_path_easyrsa }}/pki/private/ca.key"
+  when: not cafile_check.stat.exists
+
+- name: OpenVPN | PKI | Build dh.pem
+  ansible.builtin.shell: ./easyrsa gen-dh
+  args:
+    chdir: "{{ openvpn_path_easyrsa }}"
+    creates: "{{ dhparams_location }}"
+  tags:
+    - skip_ansible_lint
+
+- name: "OpenVPN | PKI | Generate the server certificate/key"
+  ansible.builtin.command: >-
+    ./easyrsa
+      {{ ' --passout=pass:' + pem_password if pem_password | default(None) else '' }}
+      {{ ' --passin=pass:' + pem_password if pem_password | default(None) else '' }}
+      gen-req {{ openvpn_server }}
+      {{ 'nopass' if not pem_password | default(None) else '' }}
+  args:
+    chdir: "{{ openvpn_path_easyrsa }}"
+    creates: "{{path_server_key}}"
+
+- name: "OpenVPN | PKI | Check if server signed key exists {{ openvpn_path_easyrsa }}/pki/issued/{{ openvpn_server }}.crt"
+  ansible.builtin.stat:
+    path: "{{ openvpn_path_easyrsa }}/pki/issued/{{ openvpn_server }}.crt"
+  register: signed_svrcrt_check
+
+- name: "OpenVPN | PKI | Sign the Server Key With CA"
+  ansible.builtin.expect:
+    command: ./easyrsa sign-req server {{ openvpn_server }}
+    responses:
+      'Enter pass phrase for .*?:$': "{{ ca_password }}"
+#      (.*)Enter pass phrase for(.*): "{{ svr_key_password }}"
+#      (.*)Confirm request details: "yes"
+  # you don't want to show passwords in your logs
+  args:
+    chdir: "{{ openvpn_path_easyrsa }}"
+  when: not signed_svrcrt_check.stat.exists
+
+
+
+
+- name: OpenVPN | PKI | block | Copy server certs and keys
+  block:
+    - name: OpenVPN | PKI | Copy dh.pem to server folder
+      ansible.builtin.file:
+        src: "{{ dhparams_location }}"
+        dest: "{{ openvpn_path }}/server/dh.pem"
+        owner: root
+        group: root
+        force: yes
+        state: hard
+    - name: OpenVPN | PKI | Copy CA cert to server folder
+      ansible.builtin.file:
+        src: "{{ openvpn_ca_cert }}"
+        dest: "{{ openvpn_path }}/server/"
+        owner: root
+        group: root
+        force: yes
+        state: hard
+    - name: OpenVPN | PKI | Copy private server key to server folder
+      ansible.builtin.file:
+        src: "{{ openvpn_path_easyrsa }}/pki/private/{{ openvpn_server }}.key"
+        dest: "{{ openvpn_path }}/server/{{ openvpn_server }}.key"
+        owner: root
+        group: root
+        force: yes
+        state: hard
+    - name: OpenVPN | PKI | Copy issued server crt to server folder
+      ansible.builtin.file:
+        src: "{{ openvpn_path_easyrsa }}/pki/issued/{{ openvpn_server }}.crt"
+        dest: "{{ openvpn_path }}/server/{{ openvpn_server }}.crt"
+        owner: root
+        group: root
+        force: yes
+        state: hard
+
+
+

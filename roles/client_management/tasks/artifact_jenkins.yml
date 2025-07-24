@@ -1,0 +1,25 @@
+---
+
+- name: client_management | main | debug report_output_folder
+  debug:
+    var: report_output_folder
+
+- name: client_management | main | block | HTML index and prework
+  block: 
+  - name: client_management | main | block | Upload file as Jenkins artifact
+    jenkins_artifact:
+      url: "{{ jenkins_url }}"
+      job_name: "OVPN_Client_management2"
+      build_number: "{{ build_number }}"
+      artifact_path: "path/to/artifact/on/jenkins" #/var/lib/jenkins/jobs/ansible_acct_management/builds/
+      filename: "output/reports/index2.html"
+      username: "jenkins-user"
+      password: "jenkins-password"
+    delegate_to: localhost
+  delegate_to: localhost
+  run_once: true
+  tags: [always]
+
+
+
+  

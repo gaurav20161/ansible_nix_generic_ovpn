@@ -1,0 +1,125 @@
+---
+#- name: Copy old sudoers file if changes are made or not.
+#  copy: scr=/etc/sudoers dest=/etc/sudoers.sav owner=root group=root
+# - name: copy sudoers file no mater if changed or not
+#   copy:
+#        src: "/etc/sudoers"
+#        dest: "/etc/sudoers.{{ lookup('pipe', 'date +%Y%m%d-%H%M') }}sav"
+#        remote_src: yes
+#        backup: yes
+
+- name: OpenVPN | useraccts | Check status for sudoers file
+  ansible.builtin.stat:
+    path: /etc/sudoers_copy_{{ ansible_date_time.date }}
+  register: sudoers_copy
+  
+- name: OpenVPN | useraccts | Create BU of sudoers file
+  ansible.builtin.copy:
+    src: /etc/sudoers
+    dest: /etc/sudoers_copy_{{ ansible_date_time.date }}
+    remote_src: yes
+    backup: yes
+  when: sudoers_copy.stat.exists == false
+
+
+- name: OpenVPN | useraccts | block | setup secondary group accounts
+  block:
+    - name: OpenVPN | useraccts | block | Check if groups exist
+      ansible.builtin.group:
+        name: "{{ item.name }}"
+      loop: "{{ groups_list }}"
+      register: existing_groups
+      changed_when: false
+    - name: OpenVPN | useraccts | block | Add groups if they don't exist
+      ansible.builtin.group:
+        name: "{{ item.name }}"
+        gid: "{{ item.gid }}"
+      loop: "{{ groups_list }}"
+      when: item.name not in existing_groups.results | map(attribute='name') | list
+    - name: OpenVPN | useraccts | block | Ensure groups exists with correct gid
+      ansible.builtin.group:
+        name: "{{item.name}}"
+        state: present
+        gid: "{{item.gid}}"
+      with_items: "{{groups_list}}"
+      tags: ['users','groups','configuration']
+  rescue:
+    - name: OpenVPN | useraccts | block | RESCUE | Print when errors
+      ansible.builtin.debug:
+        msg: 'Something went wrong'
+  always:
+    - name: OpenVPN | useraccts | block | Always do this
+      ansible.builtin.debug:
+        msg: "This always executes"
+      when: show_debug  == 'true'
+
+- name: OpenVPN | useraccts | block | add/change default useraccounts
+  block:
+    - name: OpenVPN | useraccts | block | create user list
+      ansible.builtin.user:
+        name: "{{ item.name }}"
+      loop: "{{ users_list }}"
+      register: existing_users
+      changed_when: false
+    - name: OpenVPN | useraccts | block | Add users if they don't exist
+      ansible.builtin.user:
+        name: "{{ item.name }}"
+        gid: "{{ item.uid }}"
+      loop: "{{ users_list }}"
+      when: item.name not in existing_users.results | map(attribute='name') | list
+    - name: OpenVPN | useraccts | block | User update
+      ansible.builtin.user: 
+        name: "{{item.name}}"
+        group: "{{item.group if item.group is defined else users_group}}"
+        shell: "{{item.shell if item.shell is defined else users_default_shell}}"
+        comment: "{{item.name}}"
+        uid: "{{item.uid}}"
+        groups: "{{item.groups | join(',') if item.groups is defined else users_group}}"
+        createhome: "{{'yes' if users_create_homedirs else 'no'}}"
+        generate_ssh_key: yes
+        state: present
+      with_items: "{{users_list}}"
+      tags: ['users','configuration']    
+  rescue:
+    - name: OpenVPN | useraccts | block | RESCUE | Print when errors
+      ansible.builtin.debug:
+        msg: 'Something went wrong'
+  always:
+    - name: OpenVPN | useraccts | block | Always do this
+      ansible.builtin.debug:
+        msg: "This always executes"
+      when: show_debug  == 'true'
+
+
+- name: OpenVPN | useraccts | Add sudoers access for users to the sudoers.d folder
+  ansible.builtin.lineinfile:
+    dest: /etc/sudoers.d/{{ item.name }}
+    line: "{{ item.name }} {{ 'ALL=(ALL) NOPASSWD: ALL' if item.sudoers_access else 'ALL=(ALL) ALL' }}"
+    create: yes
+  loop: "{{ admin_users }}"
+
+- name: OpenVPN | useraccts | Add cron users to the cron.allow list
+  ansible.builtin.lineinfile: dest=/etc/cron.allow state=present regexp='^{{item.name}}' line='{{item.name}}' create=True
+  with_items: "{{cron_users}}"
+  tags: ['users','configuration']
+
+
+- name: OpenVPN | useraccts | Deleted user removal
+  ansible.builtin.user: name="{{item.username}}" state=absent
+  with_items: "{{users_deleted}}"
+  tags: ['users','configuration']
+
+- name: OpenVPN | useraccts | Set to non-expire password
+  ansible.builtin.shell: chage -E -1 -M -1 "{{item.username}}"
+  with_items: "{{users}}"
+  when: non_expire_pswd
+
+- name: OpenVPN | useraccts | Set End of Service accounts
+  ansible.builtin.shell: usermod -c "End of Service" "{{item.username}}"
+  with_items: "{{eos_accounts}}"
+  when: eos_accounts
+
+- name: OpenVPN | useraccts | Lock End of Service accounts
+  ansible.builtin.shell: usermod -L "{{item.username}}"
+  with_items: "{{eos_accounts}}"
+  when: eos_accounts

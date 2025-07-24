@@ -1,0 +1,151 @@
+#!/bin/bash
+
+CONF_DIR="/etc/openvpn/client"
+EXPECTED_CONTENT="client
+proto udp
+explicit-exit-notify
+remote 192.168.50.201 1194
+dev tun
+resolv-retry infinite
+nobind
+persist-key
+persist-tun
+remote-cert-tls server
+verify-x509-name server_8hjGkbRARnPKY8J0 name
+auth SHA256
+auth-nocache
+cipher AES-128-GCM
+tls-client
+tls-version-min 1.2
+tls-cipher TLS-ECDHE-ECDSA-WITH-AES-128-GCM-SHA256
+ignore-unknown-option block-outside-dns
+setenv opt block-outside-dns # Prevent Windows 10 DNS leak
+verb 3
+<ca>
+-----BEGIN CERTIFICATE-----
+MIIB1zCCAX2gAwIBAgIUTtkkGibOTr12KE4an6dmIWbPdXIwCgYIKoZIzj0EAwIw
+HjEcMBoGA1UEAwwTY25fbURnWUtRZWtNaVpwMHVqUDAeFw0yMzExMDcxNzQ0NDZa
+Fw0zMzExMDQxNzQ0NDZaMB4xHDAaBgNVBAMME2NuX21EZ1lLUWVrTWlacDB1alAw
+WTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAARGjlql+f9ZmRmQtOxnEED0b8QTpiSH
+ZEr/OROQBgfhpFkQBzbJTYnGqOE/iMs7KfBW4QYKP8mZG3NU0uBfmIxGo4GYMIGV
+MAwGA1UdEwQFMAMBAf8wHQYDVR0OBBYEFCN/WkPiqqjIwThrJR569yAGq3qcMFkG
+A1UdIwRSMFCAFCN/WkPiqqjIwThrJR569yAGq3qcoSKkIDAeMRwwGgYDVQQDDBNj
+bl9tRGdZS1Fla01pWnAwdWpQghRO2SQaJs5OvXYoThqfp2YhZs91cjALBgNVHQ8E
+BAMCAQYwCgYIKoZIzj0EAwIDSAAwRQIhAMFWoCJvZ2GnDwSE1zidKYUAjgz/cJyY
+UJpMHGlMQJ24AiQ0VNQ8uQ4IZ3j9quE232LlGpT/HfxmFYZ9CQNQTQErPQ==
+-----END CERTIFICATE-----
+</ca>
+<cert>
+-----BEGIN CERTIFICATE-----
+MIIB2zCCAYKgAwIBAgIQWcmdlP6UufH2JadN8dUtiTAKBggqhkjOPQQDAjAeMRww
+GgYDVQQDDBNjbl9tRGdZS1Fla01pWnAwdWpQMB4XDTIzMTEwNzE5NDg1MFoXDTI2
+MDIwOTE5NDg1MFowFTETMBEGA1UEAwwKdm0tYWxtYTktMjBZMBMGByqGSM49AgEG
+CCqGSM49AwEHA0IABG2ie8pdvZZpDCdKuWNWHT0lbCgMALvM+ocgCl+5MyMLauao
+lFmCsh7sWf/pkDLTjttbTzRp7kKzRDQWNjuD5tujgaowgacwCQYDVR0TBAIwADAd
+BgNVHQ4EFgQUZrseTAzGaL2FDvre5UKP6Fj8yJQwWQYDVR0jBFIwUIAUI39aQ+Kq
+qMjBOGslHnr3IAarepyhIqQgMB4xHDAaBgNVBAMME2NuX21EZ1lLUWVrTWlacDB1
+alCCFE7ZJBomzk69dihOGp+nZiFmz3VyMBMGA1UdJQQMMAoGCCsGAQUFBwMCMAsG
+A1UdDwQEAwIHgDAKBggqhkjOPQQDAgNHADBEAiBYSYC4nuFGV0e330Wa/nesRmpT
+YcHttxu2mC9xXMGrMQIgH79Jj/iNJ4qDZh4uDg5D9k3tvePeXEDbZyXG+1K5LTQ=
+-----END CERTIFICATE-----
+</cert>
+<key>
+-----BEGIN PRIVATE KEY-----
+MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQgHd+cTP7I+xdMLc2s
+onIUbQJc2M6iMtrKC+9sjxOBsf+hRANCAARtonvKXb2WaQwnSrljVh09JWwoDAC7
+zPqHIApfuTMjC2rmqJRZgrIe7Fn/6ZAy047bW080ae5Cs0Q0FjY7g+bb
+-----END PRIVATE KEY-----
+</key>
+<tls-crypt>
+#
+# 2048 bit OpenVPN static key
+#
+-----BEGIN OpenVPN Static key V1-----
+7655dc48bbba921ff533872b2f726f17
+115f63ae862d9e4ebdc1d8eeaef9c651
+0910a50d79c0f040373767a547c00dfe
+2cc99390e912b061a9a4481e49525cf8
+06b03fb12d39da989d41c45d310083ff
+e2f8ed99a918ac421c146ba8f6972638
+7bce1af678abd4b55de66bbcd0e4cbc8
+4a1b6a5e6dff920068ab9e276d0d3d2c
+1f4182c4a4e74cf5fe2993ebcd129034
+1633103d7d73d7ab065f24d43849cf3f
+4e4a37f8f00470c08b5e26893b9d8c68
+5148c47e1be8f76df54c525a1f888db6
+98e18454269b45f09a536b8f5585db1a
+4e706e131edef6007bf9f63bfabc390d
+1b30c860071c7b2b1b4d11972c259d30
+bfc691d8fcfc16a268e04db795be046b
+-----END OpenVPN Static key V1-----
+</tls-crypt>"
+
+# Check if OpenVPN is installed
+if command -v openvpn &> /dev/null; then
+    echo "OpenVPN is already installed."
+else
+    # Prompt the user before attempting to install
+    read -p "OpenVPN is not installed. Do you want to install it? (y/n): " response
+
+    if [ "$response" == "y" ] || [ "$response" == "Y" ]; then
+        # Check if the user has sudo access
+        if [ "$(sudo -n whoami 2>&1 | grep 'root')" ]; then
+            # Install OpenVPN on Debian-based systems
+            if command -v apt-get &> /dev/null; then
+                sudo apt-get update
+                sudo apt-get install -y epel-release
+                sudo apt-get install -y openvpn
+            # Install OpenVPN on Red Hat-based systems
+            elif command -v yum &> /dev/null; then
+                sudo yum install -y epel-release
+                sudo yum install -y openvpn
+            else
+                echo "Unsupported package manager. Please install OpenVPN manually."
+                exit 1
+            fi
+
+            # Check again if OpenVPN is installed
+            if command -v openvpn &> /dev/null; then
+                echo "OpenVPN has been installed successfully."
+            else
+                echo "Failed to install OpenVPN. Please install it manually."
+                exit 1
+            fi
+        else
+            echo "You don't have sudo access. Please contact your system administrator to install OpenVPN."
+            exit 1
+        fi
+    else
+        echo "OpenVPN installation canceled."
+        exit 0
+    fi
+fi
+
+# Use the current hostname as the configuration file name
+hostname=$(hostname)
+conf_file="$CONF_DIR/$hostname.conf"
+
+# Check if the configuration file exists
+if [ -e "$conf_file" ]; then
+    # Check if there are changes in the content
+# Check if there are changes in the content
+if diff -q <(cat "$conf_file") <(echo -n "$EXPECTED_CONTENT"); then
+    echo "OpenVPN configuration file is up-to-date at $conf_file."
+else
+    # Prompt the user before changing the configuration file
+    read -p "OpenVPN configuration file has changes. Do you want to overwrite it? (y/n): " overwrite_response
+
+    if [ "$overwrite_response" == "y" ] || [ "$overwrite_response" == "Y" ]; then
+        # Update the configuration file with the specified content
+        echo -n "$EXPECTED_CONTENT" | sudo tee "$conf_file" > /dev/null
+        echo "OpenVPN configuration file updated at $conf_file"
+    else
+        echo "OpenVPN configuration file was not changed."
+    fi
+fi
+
+else
+    # Create the configuration file with the specified content
+    echo "$EXPECTED_CONTENT" | sudo tee "$conf_file" > /dev/null
+    echo "OpenVPN configuration file created at $conf_file"
+fi

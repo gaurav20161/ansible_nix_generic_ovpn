@@ -1,0 +1,34 @@
+---
+
+- name: client_management | main | debug report_output_folder
+  debug:
+    var: report_output_folder
+
+- name: client_management | main | block | HTML index and prework
+  block: 
+  - name: client_management | main | block | clean old HTML reports and files
+    ansible.builtin.file: 
+      path: "{{ item }}"
+      state: absent
+    loop:
+      - "{{ report_output_folder }}index2.html"
+      - "{{ report_output_folder }}main.css"
+      - "{{ report_output_folder }}icon-alert.gif"
+  - name: client_management | main | block | copy static HTML files
+    ansible.builtin.copy:
+      src: "{{ item}}"
+      dest: "{{ report_output_folder }}{{item}}"
+    loop:
+      - main.css
+      - icon-alert.gif
+  - name: client_management | main | block | create HTML index file
+    ansible.builtin.template: 
+      src: openvpn_clients.html.j2
+      dest: "{{ report_output_folder }}index2.html"
+  delegate_to: localhost
+  run_once: true
+  tags: [always]
+
+
+
+  

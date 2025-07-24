@@ -1,0 +1,15 @@
+---
+- hosts: all
+  become: true
+  gather_facts: true
+  vars_files:
+    - vars/global_vars.yml
+
+  vars_prompt:
+    - name: "client_name"
+      prompt: "Enter computer hostname of client."
+      default: "vmshane2"
+      private: no    
+
+  roles:
+    - { role: del_client, tags: ['del_client'] }

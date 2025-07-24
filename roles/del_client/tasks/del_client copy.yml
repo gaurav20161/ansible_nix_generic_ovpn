@@ -1,0 +1,73 @@
+---
+
+- name: Create EasyRSA client key
+  ansible.builtin.expect:
+    command: "{{ openvpn_path_easyrsa }}/easyrsa --batch revoke {{ client_name }}"
+    responses:
+      '.*Type the word.*': 'yes'
+  environment:
+    EASYRSA_VARS_FILE: "{{ openvpn_path_easyrsa_vars }}"
+  args:
+    chdir: "{{ openvpn_path_easyrsa }}"
+
+
+- name: Read file ca content and register
+  ansible.builtin.shell:
+    cmd: "cat {{ openvpn_ca_cert }}"
+  register: cafile_content
+
+- name: Insert ca content into template
+  ansible.builtin.set_fact:
+    ca_cert_content: "{{ cafile_content.stdout }}"
+
+- name: Read client cert content and register
+  ansible.builtin.shell:
+    cmd:  awk '/BEGIN/,/END CERTIFICATE/' "{{ openvpn_path_certs }}/{{ client_name }}.crt"
+  register: client_crt_content
+
+- name: Insert client cert into template
+  ansible.builtin.set_fact:
+    client_cert_content: "{{ client_crt_content.stdout }}"
+
+- name: Read client key content and register
+  ansible.builtin.shell:
+    cmd:  "cat {{ openvpn_path_keys }}/{{ client_name }}.key"
+  register: client_key_content
+
+- name: Insert client key into template
+  ansible.builtin.set_fact:
+    client_key_content: "{{ client_key_content.stdout }}"
+
+- name: Read tls key content and register
+  ansible.builtin.shell:
+    cmd:  "cat {{ openvpn_path }}/tls-crypt.key"
+  register: tls_key_content
+
+- name: Insert tls key into template
+  ansible.builtin.set_fact:
+    tls_key_content: "{{ tls_key_content.stdout }}"
+
+
+
+
+
+
+
+
+- name: add_clients | create_client | create client conf sh file
+  ansible.builtin.template:
+    src: client_setup.sh.j2
+    dest: "{{ default_file_output }}/{{ client_name }}.sh"
+  delegate_to: localhost
+
+- name: add_clients | create_client | copy client conf sh file
+  ansible.builtin.template:
+    src: client_setup.sh.j2
+    dest: "{{ openvpn_client_sh_dir }}/{{ client_name }}.sh"
+
+- name: add_clients | create_client | create client ccd file with next ip
+  ansible.builtin.template:
+    src: client_ccd_file.j2
+    dest: "{{ openvpn_path_ccd }}/{{ client_name }}"
+  
+

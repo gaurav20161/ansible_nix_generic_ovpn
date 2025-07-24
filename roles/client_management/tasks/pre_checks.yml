@@ -1,0 +1,40 @@
+---
+- name: client_management | pre_checks | Check if folder exists
+  stat:
+    path: "{{ item }}"
+  register: folder_info
+  with_items:
+    - "{{ default_file_output }}"
+    - "{{ report_output_folder }}"
+  delegate_to: localhost
+  tags:
+    - client_keys
+
+- name: client_management | pre_checks | Create directories if they do not exist
+  ansible.builtin.file:
+    path: "{{ item.item }}"
+    state: directory
+  when: not item.stat.exists
+  with_items: "{{ folder_info.results }}"
+  delegate_to: localhost
+  tags:
+    - package
+
+- name: client_management | pre_checks | set date
+  ansible.builtin.set_fact:
+    report_date: "{{ '%Y-%m-%d' | strftime }}"
+  delegate_to: localhost
+  run_once: true
+  tags:
+    - package
+    - num_of_days
+
+- name: client_management | pre_checks | Get current date and time
+  set_fact:
+    current_datetime: "{{ lookup('pipe', 'date +%Y-%m-%dT%H:%M:%S') }}"
+
+
+- name: generic ovpn client management | main | Enable IPv4 traffic forwarding
+  ansible.builtin.sysctl:
+    name: net.ipv4.ip_forward
+    value: 1

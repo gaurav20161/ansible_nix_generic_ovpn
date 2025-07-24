@@ -1,0 +1,108 @@
+---
+ssh_on_vpn_only: true
+show_debug: false
+copy_shfile: true #enable true if you want to copy sh script to /etc/openvpn folder script is testing only not production ready
+rebuild_ovpn: false
+
+easyrsa_reset: false
+
+openvpn_key_country:  "CA"
+openvpn_key_province: "Alberta"
+openvpn_key_city: "Edmonton"
+openvpn_key_org: "lvs CERTIFICATE AUTHORITY"
+openvpn_key_ou: "lvs EASY CA"
+openvpn_key_email: "shane.osullivan@lvs1.com"
+openvpn_server: "192.168.50.200"
+openvpn_server_common_name: "Easy-RSA CA" #openvpn_server_common_name if one is not provide random gen name is created
+ca_password: [] #if one is not provide random gen pwd is created
+pem_password: []
+svr_key_password: []
+openvpn_key_size: "2048"
+openvpn_cipher: "AES-256-CBC"
+openvpn_auth_digest: "SHA256"
+openvpn_auth_alg: "SHA512"
+# For all available ciphers use: openvpn --show-tls
+# For all available PFS ciphers (without eliptic curve cryptography) use: openvpn --show-tls | grep -e "-DHE-"
+# Configuration here just uses PFS ciphers leveraging AES256 and at least SHA256
+openvpn_tls_cipher: "TLS-DHE-DSS-WITH-AES-256-GCM-SHA384:TLS-DHE-RSA-WITH-AES-256-GCM-SHA384:TLS-DHE-RSA-WITH-AES-256-CBC-SHA256:TLS-DHE-DSS-WITH-AES-256-CBC-SHA256"
+
+## lock easyrsa git checkout to pull in openssl fix
+##    https://github.com/OpenVPN/easy-rsa/issues/132
+#openvpn_easyrsa_version: a138c0d83b0ff1feed385c5d2d7a1c25422fe04d
+
+easyrsa_repo: 'https://github.com/OpenVPN/easy-rsa'
+easyrsa_version: master 
+
+openvpn_proto: udp
+openvpn_port: 1194
+openvpn_mask: "11.1.0.0 255.255.255.0"
+openvpn_cidr: "11.1.0.0/24"
+openvpn_gateway: "11.1.0.1"
+
+openvpn_instances:
+  - {
+      proto: "{{ openvpn_proto }}",
+      port: "{{ openvpn_port }}",
+      mask: "{{ openvpn_mask }}",
+      cidr: "{{ openvpn_cidr }}",
+      gateway: "{{ openvpn_gateway }}",
+  }
+  # Uncomment below to listen on TCP 443. This will look like normal SSL/TLS traffic
+  # and will be more likely to get through restrictive firewalls.
+  # - {
+  #     proto: tcp,
+  #     port: 443,
+  #     mask: "10.8.0.0 255.255.255.0",
+  #     cidr: "10.8.0.0/24",
+  #     gateway: "10.8.0.1",
+  # }
+
+#client setup 
+openvpn_sync_certs: []
+openvpn_clients: "{{ groups['openvpn_clients'] | list }}"
+  
+openvpn_resolv_retry: 5
+openvpn_compression: lz4
+
+
+dns_user: dns
+dns_group: dns
+
+upstream_dns_servers:
+  - 8.8.8.8
+  - 8.8.4.4
+
+
+
+local_creds_folder: "{{ playbook_dir }}/fetched_creds"
+
+required_packages:
+  - sudo
+  # Required for ansible 'expect' module
+  #- python-pexpect
+  # Required for easy-rsa install in PKI tasks and audit tasks
+  - git
+  # Used to verify GPG signatures for mirrored packages
+  - gnupg
+  # Used to configure firewall rules
+  - iptables
+  # Word List dictionary used by several roles to generate random data
+  - "{{ package_name_words }}"
+  - "{{ package_name_auditd }}"
+  - aide
+  #- openssl
+  - openvpn
+  - dnsmasq
+  - rsyslog
+  - logrotate
+  - nano
+  - net-tools
+  - traceroute
+  
+unwanted_packages:
+  - bind9-host
+  - libbind9-140
+  - at
+  - lxcfs
+  - rpcbind
+  - nfs-common

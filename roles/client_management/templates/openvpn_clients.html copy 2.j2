@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>OpenVPN client management</title>
+    <link rel="stylesheet" type="text/css" href="main.css">
+</head>
+<body>
+    <h1>OpenVPN client management</h1>
+    <table>
+        <tr>
+            <th>Client Hostname</th>
+            <th>IP Address</th>
+            <th>Activity Status</th>
+            <th>Certificate Creation <br>Date</th>
+            <th>Certificate Expiration <br>Date</th>
+            <th>Actions</th>
+        </tr>
+        {% for result in ping_result.results %}
+            <tr>
+                <td>{{ result.item.hostname }}</td>
+                <td>{{ result.item.ip_address }}</td>
+                <td>{{ 'Active' if result.rc == 0 else 'Inactive' }}</td>
+                <td>{{ cert_start_dates.results[loop.index0].stdout | regex_replace('(notBefore=|GMT)', '') | trim }}</td>
+                <td>{{ cert_expiry_dates.results[loop.index0].stdout | regex_replace('(notAfter=|GMT)', '') | trim }}</td>
+
+                <td>
+one
+two
+three 
+                </td>                
+            </tr>
+        {% endfor %}
+    </table>
+    <h2>Create a New Certificate</h2>
+
+
+
+
+
+    <table>
+        <tr>
+            <td>Name:</td>
+            <td><input type="text" id="certificateName"></td>
+
+<td>
+test
+</td>
+        </tr>
+
+
+
+    </table>
+
+    
+</body>
+</html>

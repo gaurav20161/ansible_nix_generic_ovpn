@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>OpenVPN client management</title>
+    <link rel="stylesheet" type="text/css" href="main.css">
+</head>
+<body>
+    <h1>OpenVPN client management</h1>
+    <table>
+        <tr>
+            <th>Client Hostname</th>
+            <th>IP Address</th>
+            <th>Activity Status</th>
+            <th>Certificate Creation <br>Date</th>
+            <th>Certificate Expiration <br>Date</th>
+            <th>Actions</th>
+        </tr>
+        <tbody>
+            {% for client, details in ccd_tables.items() %}
+            <tr>
+                <td>{{ client }}</td>
+                <td>{{ details.ovpn_ip }}</td>
+                <td>{{ details.status }}</td>
+                <td>{{ details.cert_start_date }}</td>
+                <td>{{ details.cert_expiry_date }}</td>
+                <td>
+one
+two
+three 
+                </td>                
+
+
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</body>
+</html>

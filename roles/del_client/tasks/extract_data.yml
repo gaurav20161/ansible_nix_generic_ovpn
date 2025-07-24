@@ -1,0 +1,11 @@
+---
+- name: generic ovpn client management | extract_data | Get number of existing clients
+  shell: |
+    tail -n +2 /etc/openvpn/easy-rsa/pki/index.txt | grep -c "^V"
+  register: number_of_clients
+
+- name: generic ovpn client management | extract_data | Check if there are no existing clients
+  fail:
+    msg: "You have no existing clients!"
+  when: number_of_clients.stdout == '0'
+

@@ -1,0 +1,72 @@
+---
+
+- name: client_management | extrac_data | debug each key in ccd_tables
+  debug:
+    msg: "{{ item }}"
+  with_dict: "{{ ccd_tables }}"
+
+# - name: generic ovpn client management | extract_data | Read file contents
+#   slurp:
+#     src: "{{ item.path }}"
+#   register: file_content
+
+- name: client_management | read each file and extract IP
+  slurp:
+    src: "{{ item.path }}"
+  register: file_contents
+  with_items: "{{ ccd_files.files }}"
+  changed_when: false
+
+- name: client_management | set_fact | Add ovpn_ip to ccd_tables
+  set_fact:
+    ccd_tables: "{{ ccd_tables | combine({ (item.item.path | basename): { 'ovpn_ip': (item.content | b64decode).split('\n')[0].split()[1] } }) }}"
+  with_items: "{{ file_contents.results }}"
+
+
+- name: client_management | ping each IP using command
+  command: ping -c 3 {{ item.value.ovpn_ip }}
+  ignore_errors: yes
+  register: ping_result
+  with_dict: "{{ ccd_tables }}"
+
+- name: client_management | update ccd_tables with ping status
+  set_fact:
+    ccd_tables: "{{ ccd_tables | combine({ item.key: item.value | combine({'status': (ping_result.results | selectattr('item.key', 'equalto', item.key) | map(attribute='rc') | first == 0) | ternary('active', 'inactive') }) }) }}"
+  with_dict: "{{ ccd_tables }}"  
+
+- name: Get OpenVPN client certificate expiration dates
+  shell: "openssl x509 -enddate -noout -in {{ issued_ovpn_folder }}{{ item.key }}.crt"
+  with_dict: "{{ ccd_tables }}"
+  register: cert_expiry_dates
+- name: Get OpenVPN client certificate start dates
+  shell: "openssl x509 -startdate -noout -in {{ issued_ovpn_folder }}{{ item.key }}.crt"
+  with_dict: "{{ ccd_tables }}"
+  register: cert_start_dates
+
+- name: client_management | update ccd_tables with cert dates
+  set_fact:
+    ccd_tables: "{{ ccd_tables | combine({ item.key: item.value | combine({'cert_start_date': (cert_start_dates.results | selectattr('item.key', 'equalto', item.key) | map(attribute='stdout') | first | regex_replace('notBefore=', '')), 'cert_expiry_date': (cert_expiry_dates.results | selectattr('item.key', 'equalto', item.key) | map(attribute='stdout') | first | regex_replace('notAfter=', '')) }) }) }}"
+  with_dict: "{{ ccd_tables }}"
+
+
+#debug
+- name: client_management | extract_data | debug ping results
+  debug:
+    var: ping_result
+
+
+- name: client_management | extract_data | debug cert_expiry_dates
+  debug:
+    var: cert_expiry_dates
+
+- name: client_management | extract_data | debug cert_start_dates
+  debug:
+    var: cert_start_dates
+
+
+- name: client_management | extract_data | debug list ccd_tables
+  debug:
+    msg: "{{ ccd_tables.keys() | list }}"
+- name: client_management | extract_data | debug after List tables123
+  debug:
+    var: ccd_tables

@@ -1,0 +1,73 @@
+client
+dev tun
+proto {{ openvpn_proto }}
+remote {{ openvpn_server_hostname }} {{ openvpn_port }}
+ca ca.cer
+cert client.crt
+key client.key
+cipher {{ openvpn_cipher }}
+auth {{ openvpn_auth_alg }}
+auth-nocache
+tls-version-min 1.2
+tls-cipher {{ openvpn_tls_cipher }}
+resolv-retry {{ openvpn_resolv_retry }}
+{% if openvpn_compression is not undefined and openvpn_compression != "" %}
+compress {{ openvpn_compression }}
+{% endif %}
+nobind
+persist-key
+persist-tun
+mute-replay-warnings
+verb 3
+
+
+
+
+
+# tls-client
+# remote-cert-tls server
+# {% if openvpn_use_modern_tls %}
+# tls-version-min 1.2
+# {% endif %}
+# keepalive {{ openvpn_keepalive_ping }} {{ openvpn_keepalive_timeout }}
+# {% if openvpn_compression is not undefined and openvpn_compression != "" %}
+# compress {{ openvpn_compression }}
+# {% endif %}
+# {% if openvpn_use_ldap %}
+# auth-user-pass
+# {% endif %}
+
+# {% for option in openvpn_addl_client_options %}
+# {{ option }}
+# {% endfor %}
+
+# route-method exe
+# route-delay 2
+# {% if openvpn_client_register_dns %}
+# register-dns
+# {% endif %}
+
+# {% if tls_auth_required %}
+# key-direction 1
+# {% endif %}
+# <ca>
+# {{ ca_cert.content|b64decode }}
+# </ca>
+
+# {% if tls_auth_required %}
+# <tls-auth>
+# {{ tls_auth.content|b64decode }}
+# </tls-auth>
+# {% endif %}
+
+# <cert>
+# {{ item.0.content|b64decode }}
+# </cert>
+
+# <key>
+# {{ item.1.content|b64decode }}
+# </key>
+
+# {% if openvpn_verify_cn|bool %}
+# verify-x509-name OpenVPN-Server-{{ inventory_hostname[:49] }} name
+# {% endif %}

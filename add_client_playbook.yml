@@ -1,0 +1,23 @@
+---
+- hosts: all
+  become: true
+  gather_facts: true
+  vars_files:
+    - vars/global_vars.yml
+
+  vars_prompt:
+    - name: "client_name"
+      prompt: "Enter computer hostname of client."
+      default: "vm-alma9-3"
+      private: no    
+
+    - name: "client_password"
+      prompt: "Enter password for the client. Press Enter for no password."
+      private: yes
+      encrypt: "sha512_crypt"
+      default: ""
+
+  roles:
+    - { role: add_client, tags: ['add_client'] }
+
+

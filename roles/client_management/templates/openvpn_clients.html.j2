@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>OpenVPN Client Management</title>
+    <link rel="stylesheet" type="text/css" href="main.css">
+</head>
+<body>
+    <h1>OpenVPN Client Management</h1>
+
+    <h2>Active Clients</h2>
+    <table>
+        <tr>
+            <th>Client Hostname</th>
+            <th>IP Address</th>
+            <th>Activity Status</th>
+            <th>Certificate Creation Date</th>
+            <th>Certificate Expiration Date</th>
+            <th>Actions</th>
+        </tr>
+        <tbody>
+            {% for client, details in ccd_tables.items() %}
+                {% if details.status == 'active' %}
+                <tr>
+                    <td>{{ client }}</td>
+                    <td>{{ details.ovpn_ip }}</td>
+                    <td>{{ details.status }}</td>
+                    <td>{{ details.cert_start_date }}</td>
+                    <td>{{ details.cert_expiry_date }}</td>
+                    <td>
+                        one<br>
+                        two<br>
+                        three
+                    </td>
+                </tr>
+                {% endif %}
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <h2>Inactive Clients</h2>
+    <table>
+        <tr>
+            <th>Client Hostname</th>
+            <th>IP Address</th>
+            <th>Activity Status</th>
+            <th>Certificate Creation Date</th>
+            <th>Certificate Expiration Date</th>
+            <th>Actions</th>
+        </tr>
+        <tbody>
+            {% for client, details in ccd_tables.items() %}
+                {% if details.status == 'inactive' %}
+                <tr>
+                    <td>{{ client }}</td>
+                    <td>{{ details.ovpn_ip }}</td>
+                    <td>{{ details.status }}</td>
+                    <td>{{ details.cert_start_date }}</td>
+                    <td>{{ details.cert_expiry_date }}</td>
+                    <td>
+                        one<br>
+                        two<br>
+                        three
+                    </td>
+                </tr>
+                {% endif %}
+            {% endfor %}
+        </tbody>
+    </table>
+</body>
+</html>

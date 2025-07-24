@@ -1,0 +1,115 @@
+---
+- name: OpenVPN | package | Ensure the APT cache is up to date
+  ansible.builtin.apt:
+    update_cache: yes
+  changed_when: False
+  when: ansible_os_family == "Debian"
+
+- name: OpenVPN | package | Remove non-required packages
+  ansible.builtin.package:
+    name: "{{ item }}"
+    state: absent
+  with_items: "{{ unwanted_packages }}"
+
+- name: OpenVPN | package | Install {{ ansible_distribution }} specific packages for OS {{ ansible_os_family }} family
+  ansible.builtin.package:
+    name: "{{ item }}"
+  with_items: "{{ os_family_specific_pre }}"
+  register: install_specific_result
+
+- name: OpenVPN | package | Get official OpenVPN APT key
+  # Work around for ansible issue https://github.com/ansible/ansible/issues/22647
+  ansible.builtin.get_url:
+    url: https://swupdate.openvpn.net/repos/repo-public.gpg
+    dest: ~/openvpn.gpg
+  when: ansible_os_family == "Debian"
+
+- name: OpenVPN | package | Add the official OpenVPN APT key
+  # Work around for ansible issue https://github.com/ansible/ansible/issues/22647
+  ansible.builtin.apt_key:
+    file: ~/openvpn.gpg
+    state: present
+  when: ansible_os_family == "Debian"
+
+- name: OpenVPN | package | Reread ansible_lsb facts
+  ansible.builtin.setup: filter=ansible_lsb*
+
+- name: OpenVPN | package | Add the official OpenVPN repository
+  ansible.builtin.apt_repository:
+    repo: 'deb https://build.openvpn.net/debian/openvpn/stable {{ ansible_lsb.codename }} main'
+    state: present
+    update_cache: yes
+  when: ansible_os_family == "Debian"
+
+- name: OpenVPN | package | Add debian backports
+  ansible.builtin.apt_repository:
+    repo: 'deb http://ftp.debian.org/debian {{ ansible_lsb.codename }}-backports main'
+    state: present
+    update_cache: yes
+  when: ansible_distribution in ['Debian']
+
+- name: OpenVPN | package | Upgrade systemd on debian
+  ansible.builtin.apt:
+    name: systemd
+    state: latest
+    default_release: "{{ ansible_lsb.codename }}-backports"
+  when: ansible_distribution in ['Debian']
+  tags:
+    # Need latest, systemd v215 is really old and a pain to support alongside newer versions
+    - skip_ansible_lint
+
+- name: OpenVPN | package | Install required packages
+  ansible.builtin.package:
+    name: "{{ item }}"
+  with_items: "{{ required_packages }}"
+  register: install_required_result
+  tags:
+    - skip_ansible_lint
+
+- name: OpenVPN | package | apt - upgrade any out of date packages
+  ansible.builtin.apt:
+    upgrade: safe
+  when: ansible_os_family == "Debian"
+
+- name: OpenVPN | package | yum - upgrade any out of date packages
+  ansible.builtin.yum:
+    name: '*'
+    state: latest
+    update_cache: yes
+  when: ansible_os_family == "RedHat"
+  tags:
+    - skip_ansible_lint
+
+- name: OpenVPN | package | Copy the unattended-upgrades templates to enable automatic security updates
+  ansible.builtin.copy:
+    src: "{{ item.src }}"
+    dest: "{{ item.dest }}"
+    owner: root
+    group: root
+    mode: 0644
+  with_items:
+    - { src: "10periodic",            dest: "/etc/apt/apt.conf.d" }
+    - { src: "50unattended-upgrades", dest: "/etc/apt/apt.conf.d" }
+  when: ansible_os_family == "Debian"
+
+# - name: OpenVPN | package | Configure yum-cron
+#   ansible.builtin.lineinfile:
+#     regexp: "{{ item.regexp }}"
+#     line: "{{ item.line }}"
+#     dest: /etc/yum/yum-cron.conf
+#     state: present
+#   with_items:
+#     - {regexp: '^update_cmd\s*=\s*', line: "update_cmd = security"}
+#     - {regexp: '^apply_updates\s*=\s*', line: "apply_updates = yes"}
+#   when: ansible_os_family == "RedHat"
+
+- name: OpenVPN | package | Install pexpect via pip
+  ansible.builtin.pip:
+    name: "pexpect"
+    version: "3.3"
+
+- name: OpenVPN | package | copy sh file
+  ansible.builtin.copy:
+    src: "openvpn-install.sh"
+    dest: "{{ openvpn_path }}"
+  when: copy_shfile

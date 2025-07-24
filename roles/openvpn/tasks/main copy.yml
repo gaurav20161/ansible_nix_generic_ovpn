@@ -1,0 +1,35 @@
+---
+- name: OpenVPN | Install | Set Distro/Version specific variables
+  ansible.builtin.include_tasks_vars: "{{ item }}"
+  with_first_found:
+    #- "../vars/{{ ansible_distribution }}-{{ ansible_distribution_major_version | int}}.yml"
+    #- "../vars/{{ ansible_distribution }}.yml"
+    - "../vars/{{ ansible_os_family }}.yml"
+    #- "../vars/default.yml"
+  notify:
+    - clear history
+
+- name: check for missing packages
+  ansible.builtin.include_tasks: "packages.yml"
+- name: setup pki
+  ansible.builtin.include_tasks: "pki.yml"
+- name: setup openvpn
+  ansible.builtin.include_tasks: "openvpn.yml"
+- name: OpenVPN | dns | setup dns
+  ansible.builtin.include_tasks: "dns.yml"
+# - name: OpenVPN | 3.4.4.2.X_sysctl | setup cis security for sysctl
+#   ansible.builtin.include_tasks: "3.4.4.2.X_sysctl.yml"
+
+
+# - include: harden_umask.yml
+# - include: harden_services.yml
+# - include: harden_kernel.yml
+#   when: ansible_virtualization_type != "docker"
+# - include: harden_misc.yml
+# - include: harden_auditd.yml
+
+# - include: firewall.yml
+# - include: harden_password.yml
+# - include: harden_users.yml
+# - include: harden_sshd.yml
+# - include: harden_aide.yml

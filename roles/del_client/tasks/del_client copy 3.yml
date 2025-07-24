@@ -1,0 +1,36 @@
+---
+
+# - name: Create EasyRSA client key
+#   ansible.builtin.expect:
+#     command: "{{ openvpn_path_easyrsa }}/easyrsa --batch revoke {{ client_name }}"
+#     responses:
+#       '.*Type the word.*': 'yes'
+#   environment:
+#     EASYRSA_VARS_FILE: "{{ openvpn_path_easyrsa_vars }}"
+#   args:
+#     chdir: "{{ openvpn_path_easyrsa }}"
+
+
+
+
+
+
+
+# - name: Read file and extract serial for vmshane2
+#   ansible.builtin.shell: cat /etc/openvpn/easy-rsa/pki/index.txt | grep vmshane2 | awk '{print $2}'
+#   register: serial_result
+#   changed_when: false
+
+# - debug:
+#     msg: "Serial for vmshane2: {{ serial_result.stdout }}"
+#   when: serial_result.stdout is not empty
+
+- name: Read file and extract serial for the provided client name
+  ansible.builtin.shell: cat /etc/openvpn/easy-rsa/pki/index.txt | grep "{{ client_name }}" | awk '{print $2}'
+  register: serial_result
+  changed_when: false
+
+- debug:
+    msg: "Serial for {{ client_name }}: {{ serial_result.stdout }}"
+  when: serial_result.stdout != ""
+

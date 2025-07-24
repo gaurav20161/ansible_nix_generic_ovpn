@@ -1,0 +1,7 @@
+---
+#include task files
+
+
+
+- name: generic ovpn client management | main | delete client
+  ansible.builtin.include_tasks: "del_client.yml"

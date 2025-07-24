@@ -1,0 +1,32 @@
+#!/bin/bash
+
+openvpn_path="/etc/openvpn/ccd"
+class_c_ip="11.1.1"
+ip_range_start=2
+ip_range_end=253
+
+# Function to check if an IP is in use
+ip_in_use() {
+    local ip_to_check=$1
+    if grep -q "$ip_to_check" "$openvpn_path"/*; then
+        return 0  # IP in use
+    else
+        return 1  # IP not in use
+    fi
+}
+
+# Function to find the next available IP
+find_next_ip() {
+    for ((i=$ip_range_start; i<=$ip_range_end; i++)); do
+        current_ip="$class_c_ip.$i"
+        if ! ip_in_use "$current_ip"; then
+            echo "$current_ip"
+            return
+        fi
+    done
+    echo "No available IP found in the specified range."
+}
+
+# Display the next available IP
+next_ip=$(find_next_ip)
+echo "$next_ip"

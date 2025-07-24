@@ -1,0 +1,36 @@
+---
+- name: OpenVPN | main | Set Distro/Version specific variables
+  ansible.builtin.include_tasks_vars: "{{ item }}"
+  with_first_found:
+    #- "../vars/{{ ansible_distribution }}-{{ ansible_distribution_major_version | int}}.yml"
+    #- "../vars/{{ ansible_distribution }}.yml"
+    - "../vars/{{ ansible_os_family }}.yml"
+    #- "../vars/default.yml"
+  notify:
+    - clear history
+
+- name: OpenVPN | main | check for missing packages
+  ansible.builtin.include_tasks: "packages.yml"
+- name: OpenVPN | main | setup pki
+  ansible.builtin.include_tasks: "pki.yml"
+- name: OpenVPN | main | setup openvpn
+  ansible.builtin.include_tasks: "openvpn.yml"
+# - name: OpenVPN | main | setup dns
+#   ansible.builtin.include_tasks: "dns.yml"
+- name: OpenVPN | main | setup sysctl
+  ansible.builtin.include_tasks: "3.4.4.2.X_sysctl.yml"
+
+
+# #below is for client setup
+# # - name: OpenVPN | cert_sync_detection | Compare existing certs against 'clients'
+# #   ansible.builtin.include_tasks: "cert_sync_detection.yml"
+# #   when: openvpn_sync_certs
+# #   tags:
+# #     - sync_certs
+
+# - name: OpenVPN | main | Generate client keys and files
+#   ansible.builtin.include_tasks: client_keys.yml
+#   when: openvpn_clients is defined
+#   tags:
+#     - client_keys
+

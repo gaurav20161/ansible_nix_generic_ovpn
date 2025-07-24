@@ -1,0 +1,58 @@
+---
+# The default shell for a user if none is specified
+users_default_shell: /bin/bash
+# Create home dirs for new users? Set this to false if you manage home
+# directories in some other way.
+users_create_homedirs: true
+
+#password is encrypted
+#perl -e 'print crypt("SecretPassword","\$1\$vbFGrt45")."\n"'
+#take output for above and paste into user password between the single quotes
+# shanes default password P8ssw0rd123
+# $1$vbFGrt45$7VtD5bhSiE323V1BA2kHZ1
+#  - { username: testshane, name: Shanetest user User, uid: 666, groups: ['users'], password: '$1$vbFGrt45$7VtD5bhSiE323V1BA2kHZ1' }
+
+# epcor default password
+# - { username: ifadmmk3, name: Oracle Dev User, uid: 1606, groups: ['users','oradbas], shell: /bin/ksh, password: '$1$vbFGrt45$/7.I1bYiMhn4ST4aH3lEb.' }
+
+user_default_password: '$1$vbFGrt45$/7.I1bYiMhn4ST4aH3lEb.'
+
+#to activate a variable list remove the [] add new line(s) below it
+
+# admin user to add to sudoers wheel with nopasswd prompt
+# add the wheel group to the users groups to give sudo access with password prompt
+# remove [] add below admin_users
+admin_users: []
+#    - admin: root
+
+
+# cron user to add to cron.allow file
+# remove [] add below cron_users
+#    - name: root
+cron_users: []
+#    - name: root
+  
+
+# Default group (gid) users belong to
+# belong to
+users_group: ERPSA
+
+# add the wheel group to the users groups to give sudo access with password prompt
+# Lists of users to create and delete
+users: 
+    - { username: oraoper, name: Oracle User, uid: 503, group: orapper, groups: ['users'], shell: /bin/ksh, password: '$1$vbFGrt45$/UBUKomXzIzjfi2tLG9Mi.' }   
+#    - { username: testshane, name: Shanetest user User, uid: 666, groups: ['users','oradbas','wheel'], password: '$1$vbFGrt45$7VtD5bhSiE323V1BA2kHZ1' }
+
+
+users_deleted: []
+#    - username: a_echien
+#    - username: a_gpotter
+#    - username: a_dselberg
+#    - username: a_crecto
+#    - username: a_kjacklin
+#    - username: a_mwang
+
+groups_to_create: []
+#  - { groupname: oradba, gid: 501 }
+#  - { groupname: oinstall, gid: 502 }
+#  - { groupname: oradbas, gid: 101 }

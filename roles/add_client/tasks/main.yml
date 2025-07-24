@@ -1,0 +1,51 @@
+---
+#include task files
+
+
+- name: generic ovpn client management | main | Enable IPv4 traffic forwarding
+  ansible.builtin.sysctl:
+    name: net.ipv4.ip_forward
+    value: 1
+
+- name: generic ovpn client management | main | Gather OpenVPN client configurations
+  ansible.builtin.find:
+    paths: "{{ openvpn_path_ccd }}"
+    recurse: no
+    patterns: "*"
+  register: ccd_files
+
+- name: generic ovpn client management | main | Create a list of client data
+  set_fact:
+    client_data: []
+
+
+
+- name: generic ovpn client management | main | Check if client name already exists
+  shell: grep -q "^.*\b{{ client_name }}\b.*$" /etc/openvpn/easy-rsa/pki/index.txt
+  ignore_errors: true
+  register: grep_result
+
+- name: generic ovpn client management | main | Exit if client name already exists
+  fail:
+    msg: "client_name already exists in the file /etc/openvpn/easy-rsa/pki/index.txt"
+  when: grep_result.rc == 0
+
+
+
+
+- name: generic ovpn client management | main | Loop over the list of files
+  include_tasks: extract_data.yml
+  loop: "{{ ccd_files.files }}"
+  loop_control:
+    loop_var: item
+
+- name: generic ovpn client management | main | extract next available ip
+  ansible.builtin.include_tasks: "extract_data.yml"
+
+- name: generic ovpn client management | main | create client
+  ansible.builtin.include_tasks: "create_client.yml"
+
+
+- name: generic ovpn client management | main | run debug tasks if show_debug var true
+  ansible.builtin.include_tasks: "debug_vars.yml"
+

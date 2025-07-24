@@ -1,0 +1,34 @@
+# generate client keys
+---
+# - name: OpenVPN | client_keys | Create a file
+#   ansible.builtin.copy:
+#     content: "This is the content of the file."
+#     dest: file.txt
+#   delegate_to: localhost
+#   tags:
+#     - createfile
+
+
+
+
+- name: Find all files in the "{{ openvpn_path_ccd }}" folder
+  find:
+    paths: "{{ openvpn_path_ccd }}"
+    recurse: yes
+    file_type: file
+  register: found_files
+  tags:
+    - createfile
+
+- name: Extract filenames
+  set_fact:
+    filenames: "{{ found_files.files | map(attribute='path') | map('basename') | list }}"
+  tags:
+    - createfile
+
+- name: Display filenames
+  debug:
+    var: filenames
+  when: show_debug  == 'true'
+  tags:
+    - createfile

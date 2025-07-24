@@ -1,0 +1,62 @@
+---
+- name: generic ovpn client management | extract_data | Read file contents SERVER_NAME_GENERATED
+  slurp:
+    src: "{{ openvpn_path_easyrsa }}/SERVER_NAME_GENERATED"
+  register: file_content
+
+- name: generic ovpn client management | extract_data | Extract easy-rsa name
+  set_fact:
+    sng_name: "{{ file_content.content | b64decode | trim }}"
+
+
+# - name: generic ovpn client management | extract_data | Extract hostname and IP address
+#   set_fact:
+#     hostname: "{{ item.path | basename | regex_replace('(.*)\\.conf$', '\\1') }}"
+#     ip_address: "{{ file_content.content | b64decode | regex_search('ifconfig-push ([0-9.]+)', '\\1') }}"
+
+# - name: generic ovpn client management | extract_data | Add client data to the list
+#   set_fact:
+#     client_data: "{{ client_data + [{'hostname': hostname, 'ip_address': ip_address}] }}"
+
+
+- name: generic ovpn client management | extract_data | block | create bash script
+  ansible.builtin.template: 
+    src: next_ip.sh.j2
+    dest: /tmp/next_ip.sh
+    mode: 0755
+
+- name: Execute the Bash script
+  command: /tmp/next_ip.sh
+  register: script_output  # Capture the script output
+
+- name: Set the next available IP as a fact
+  set_fact:
+    next_available_ip: "{{ script_output.stdout_lines[0] }}"
+  when: script_output.rc == 0  # Only set the fact if the script executed successfully
+
+
+- name: Delete the Bash script after use
+  file:
+    path: /tmp/next_ip.sh
+    state: absent
+
+- name: Check if Configuration Files for Hostname already exist
+  stat:
+    path: "{{ openvpn_path_reqs }}/{{ client_name }}.req"
+  register: config_file_stat
+
+
+- name: Display existing configuration and continue with the next steps if found
+  debug:
+    msg: "An OpenVPN client configuration already exists for {{ client_name }}:\n{{ openvpn_path_reqs }}/{{ client_name }}.req"
+  when: config_file_stat.stat.exists
+
+- name: Continue with the next steps if configuration does not exist
+  debug:
+    msg: "No existing configuration found for {{ client_name }}"
+  when: not config_file_stat.stat.exists
+
+- name: Get content of ca.crt 
+  command: cat /etc/openvpn/easy-rsa/pki/ca.crt
+  register: ca_crt_content
+    

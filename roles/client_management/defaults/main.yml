@@ -1,0 +1,19 @@
+---
+
+local_creds_folder: []
+client_creds_folder: []
+default_ovpn_folder: /etc/openvpn
+ccd_ovpn_folder: "{{ default_ovpn_folder }}/ccd/"
+easyrsa_folder: "{{ default_ovpn_folder }}/easy-rsa"
+issued_ovpn_folder: "{{ easyrsa_folder }}/pki/issued/"
+
+
+
+client_req_packages:
+- epel-release
+- "openvpn"
+- "python3-cryptography"
+- net-tools
+- traceroute
+
+openvpn_client_config_name: 192.168.50.139

@@ -1,0 +1,41 @@
+# look at /ansible/roles/useraccts/defaults/readme for more explanations.
+---
+show_debug: false
+
+users_default_shell: /bin/bash
+users_create_homedirs: true
+user_default_password: '$1$vbFGrt45$uhOv0VBubklwXwVhl0r2..'
+
+#admin users are users that get added to the sudoers.d folder for admin privileges
+admin_users: 
+    - { name: openvpn, sudoers_access: yes }
+
+
+cron_users: []
+#    - name: username
+
+users_group: []
+
+non_expire_pswd: []
+#    - name: donotuse  
+
+#note group without s is primary group, groups with s is secondary groups that can be comma seperated
+
+users_list:
+    - { name: openvpn, uid: 986, group: openvpn, groups: ['users'] }
+
+
+users_deleted: []
+#    - username: dwight
+
+eos_accounts: []
+#    - username: shane
+#    - username: dwight
+
+#group names like webusers, appusers, or if you want to hardcode the gid to match the uid or give unique gid
+groups_list: 
+    - { name: openvpn, gid: 986 }
+#    - { name: openvpn, gid: 10035 }
+  #  - { name: group2, gid: 10121 }
+
+

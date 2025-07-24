@@ -1,0 +1,2 @@
+ifconfig-push {{ next_available_ip }} {{ openvpn_subnet_mask }}
+push "route $class_c_ip.0 255.255.254.0"
