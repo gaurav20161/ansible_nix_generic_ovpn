@@ -1,6 +1,6 @@
 ---
 - name: OpenVPN | main | Set Distro/Version specific variables
-  ansible.builtin.include_tasks_vars: "{{ item }}"
+  ansible.builtin.include_vars: "{{ item }}"
   with_first_found:
     #- "../vars/{{ ansible_distribution }}-{{ ansible_distribution_major_version | int}}.yml"
     #- "../vars/{{ ansible_distribution }}.yml"
