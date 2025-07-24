@@ -13,7 +13,7 @@ openvpn_key_org: "lvs CERTIFICATE AUTHORITY"
 openvpn_key_ou: "lvs EASY CA"
 openvpn_key_email: "gaurav.kumar@lvs1.com"
 
-openvpn_server: "192.168.50.200"   ######## TO BE UPDATED BASED ON ENVIRONMENT
+openvpn_server: "10.7.1.97"   ######## TO BE UPDATED BASED ON ENVIRONMENT
 
 
 openvpn_server_common_name: "Easy-RSA CA" #openvpn_server_common_name if one is not provide random gen name is created
