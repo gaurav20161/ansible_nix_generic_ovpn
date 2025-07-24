@@ -2,7 +2,7 @@
 ssh_on_vpn_only: true
 show_debug: false
 copy_shfile: true #enable true if you want to copy sh script to /etc/openvpn folder script is testing only not production ready
-rebuild_ovpn: false
+rebuild_ovpn: true   ##### This needs to be updated
 
 easyrsa_reset: false
 
